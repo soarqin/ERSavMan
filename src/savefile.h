@@ -46,10 +46,11 @@ public:
     };
     explicit SaveFile(const std::string &filename);
     [[nodiscard]] inline bool ok() const { return ok_; }
-    bool verifyMD5();
     bool exportToFile(const std::string &filename, int slot);
     bool importFromFile(const std::string &filename, int slot);
     void listSlots(int slot = -1);
+    void fixHashes();
+    bool verifyHashes();
 
 private:
     void listSlot(int slot);

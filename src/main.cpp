@@ -9,10 +9,11 @@ int main(int argc, char *argv[]) {
         {"export", required_argument, nullptr, 'e'},
         {"import", no_argument, nullptr, 'i'},
         {"slot", required_argument, nullptr, 's'},
+        {"hashfix", no_argument, nullptr, 'h'},
         {nullptr},
     };
     if (argc <= 1) {
-        fprintf(stderr, "Usage: ERSavMan -f <filename> [-l | -e <export filename>] | -i <import filename> [-s <slot id>]\n");
+        fprintf(stderr, "Usage: ERSavMan -f <filename> [-l | -h | -e <export filename>] | -i <import filename> [-s <slot id>]\n");
         return 0;
     }
     char opt;
@@ -20,7 +21,7 @@ int main(int argc, char *argv[]) {
     int slot = -1;
     std::string filename;
     std::string filename2;
-    while ((opt = getopt_long(argc, argv, ":f:e:i:s:l", longOptions, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, ":f:e:i:s:lh", longOptions, nullptr)) != -1) {
         switch (opt) {
         case ':':
             fprintf(stderr, "mssing argument for %c\n", optopt);
@@ -29,7 +30,18 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "bad arument: %c\n", optopt);
             return -1;
         case 'l':
+            if (mode != 0) {
+                fprintf(stderr, "-l cannot be used with other action options\n");
+                return -1;
+            }
             mode = 1;
+            break;
+        case 'h':
+            if (mode != 0) {
+                fprintf(stderr, "-h cannot be used with other action options\n");
+                return -1;
+            }
+            mode = 4;
             break;
         case 'f':
             filename = optarg;
@@ -64,6 +76,9 @@ int main(int argc, char *argv[]) {
         break;
     case 3:
         save.importFromFile(filename2, slot);
+        break;
+    case 4:
+        save.fixHashes();
         break;
     default:
         save.listSlots(slot);

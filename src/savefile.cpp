@@ -156,18 +156,6 @@ SaveFile::SaveFile(const std::string &filename) {
     filename_ = filename;
 }
 
-bool SaveFile::verifyMD5() {
-    if (saveType_ != Steam) { return true; }
-    uint8_t hash[16];
-    for (auto &slot: slots_) {
-        md5Hash(slot->data.data(), slot->data.size(), hash);
-        if (memcmp(hash, slot->md5hash, 16) != 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool SaveFile::exportToFile(const std::string &filename, int slot) {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
     std::ofstream ofs(filename, std::ios::out | std::ios::binary);
@@ -263,4 +251,31 @@ void SaveFile::listSlot(int slot) {
         fprintf(stdout, "%4d: Other\n", slot);
         break;
     }
+}
+
+void SaveFile::fixHashes() {
+    if (saveType_ != Steam) { return; }
+    std::fstream fs(filename_, std::ios::in | std::ios::out | std::ios::binary);
+    uint8_t hash[16];
+    for (auto &slot: slots_) {
+        md5Hash(slot->data.data(), slot->data.size(), hash);
+        if (memcmp(hash, slot->md5hash, 16) != 0) {
+            memcpy(slot->md5hash, hash, 16);
+            fs.seekg(slot->offset, std::ios::beg);
+            fs.write((const char*)hash, 16);
+        }
+    }
+    fs.close();
+}
+
+bool SaveFile::verifyHashes() {
+    if (saveType_ != Steam) { return true; }
+    uint8_t hash[16];
+    for (auto &slot: slots_) {
+        md5Hash(slot->data.data(), slot->data.size(), hash);
+        if (memcmp(hash, slot->md5hash, 16) != 0) {
+            return false;
+        }
+    }
+    return true;
 }
