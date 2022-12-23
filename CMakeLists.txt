@@ -11,5 +11,4 @@ add_static_runtime_option()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_subdirectory(deps)
 add_subdirectory(src)

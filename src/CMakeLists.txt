@@ -1,7 +1,20 @@
 project(ERSM CXX)
 
-include(CheckCXXSourceRuns)
+# wxWidget options
+set(WXWIDGETS_PREFIX "" CACHE STRING "wxWidgets ROOT dir")
+option(WXWIDGETS_STATIC "wxWidgets link static libaries" OFF)
 
+# find wxWidget
+if(WXWIDGETS_PREFIX)
+    set(wxWidgets_CONFIG_OPTIONS --prefix=${WXWIDGETS_PREFIX})
+endif()
+set(wxWidgets_USE_UNICODE ON)
+set(wxWidgets_USE_STATIC ${WXWIDGETS_STATIC})
+find_package(wxWidgets REQUIRED COMPONENTS core base)
+include(${wxWidgets_USE_FILE})
+
+# Check for AVX2 support
+include(CheckCXXSourceRuns)
 if(MSVC)
     set(CMAKE_REQUIRED_FLAGS "/arch:AVX2")
 else()
@@ -36,15 +49,13 @@ endif()
 add_executable(${PROJECT_NAME} main.cpp ${MD5_SRC}
     mem.cpp mem.h
     savefile.cpp savefile.h
-    )
+    mainwnd.cpp mainwnd.h)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME ERSavMan
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     FOLDER app)
 target_include_directories(${PROJECT_NAME} PRIVATE .)
-if(WIN32)
-    target_link_libraries(${PROJECT_NAME} wingetopt)
-endif()
+target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
 if(HAVE_AVX2_EXTENSIONS)
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PUBLIC /arch:AVX2)

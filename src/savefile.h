@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 #include <memory>
 #include <cstdint>
 
@@ -29,13 +30,13 @@ struct SaveSlot {
 struct CharSlot: SaveSlot {
     std::wstring charname;
     uint16_t level;
+    uint32_t stats[8];
     int useridOffset;
     uint64_t userid;
 };
 
 struct SummarySlot: SaveSlot {
     uint64_t userid;
-    std::vector<std::pair<std::string, int>> charInfo;
 };
 
 class SaveFile {
@@ -48,9 +49,12 @@ public:
     [[nodiscard]] inline bool ok() const { return ok_; }
     bool exportToFile(const std::string &filename, int slot);
     bool importFromFile(const std::string &filename, int slot);
-    void listSlots(int slot = -1);
+    void listSlots(int slot = -1, const std::function<void(int, const SaveSlot&)> &func = nullptr);
     void fixHashes();
     bool verifyHashes();
+    [[nodiscard]] inline SaveType saveType() const { return saveType_; }
+    [[nodiscard]] size_t count() const { return slots_.size(); }
+    [[nodiscard]] const SaveSlot &slot(size_t index) const { return *slots_[index]; }
 
 private:
     void listSlot(int slot);

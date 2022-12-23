@@ -9,7 +9,6 @@
 #include "savefile.h"
 #include "mem.h"
 #include <fstream>
-#include <functional>
 #include <cstring>
 
 inline void readWString(std::wstring &output, const uint16_t *input) {
@@ -126,13 +125,20 @@ SaveFile::SaveFile(const std::string &filename) {
         switch (slot->slotType) {
         case SaveSlot::Character: {
             auto *slot2 = (CharSlot *)slot.get();
-            slot2->level = 0;
             slot2->useridOffset = 0;
             slot2->userid = 0;
             findUserIDOffset(slot2, [slot2](int offset) {
                 slot2->useridOffset = offset;
                 slot2->userid = *(uint64_t*)&slot2->data[offset];
             });
+            auto offset = findLevelOffset(slot2->data);
+            if (offset >= 0x2C) {
+                slot2->level = *(uint16_t*)(slot2->data.data() + offset);
+                memcpy(slot2->stats, slot2->data.data() + offset - 0x2C, 8 * sizeof(uint32_t));
+            } else {
+                slot2->level = 0;
+                memset(slot2->stats, 0, sizeof(slot2->stats));
+            }
             break;
         }
         case SaveSlot::Summary: {
@@ -216,7 +222,8 @@ bool SaveFile::importFromFile(const std::string &filename, int slot) {
     return true;
 }
 
-void SaveFile::listSlots(int slot) {
+void SaveFile::listSlots(int slot, const std::function<void(int, const SaveSlot&)> &func) {
+#if defined(USE_CLI)
     fprintf(stdout, "SaveType: %s\n", saveType_ == Steam ? "Steam" : "PS4");
     if (saveType_ == Steam) {
         for (auto &s: slots_) {
@@ -233,6 +240,15 @@ void SaveFile::listSlots(int slot) {
     } else if (slot < slots_.size()) {
         listSlot(slot);
     }
+#else
+    if (slot < 0) {
+        for (int i = 0; i < slots_.size(); ++i) {
+            func(i, *slots_[i]);
+        }
+    } else if (slot < slots_.size()) {
+        func(slot, *slots_[slot]);
+    }
+#endif
 }
 
 void SaveFile::listSlot(int slot) {
