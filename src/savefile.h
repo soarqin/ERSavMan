@@ -49,6 +49,8 @@ public:
     [[nodiscard]] inline bool ok() const { return ok_; }
     bool exportToFile(const std::string &filename, int slot);
     bool importFromFile(const std::string &filename, int slot);
+    bool exportFaceToFile(const std::string &filename, int slot);
+    bool importFaceFromFile(const std::string &filename, int slot);
     void listSlots(int slot = -1, const std::function<void(int, const SaveSlot&)> &func = nullptr);
     void fixHashes();
     bool verifyHashes();

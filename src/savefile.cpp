@@ -222,6 +222,64 @@ bool SaveFile::importFromFile(const std::string &filename, int slot) {
     return true;
 }
 
+bool SaveFile::exportFaceToFile(const std::string &filename, int slot) {
+    if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
+    std::ofstream ofs(filename, std::ios::out | std::ios::binary);
+    if (!ofs.is_open()) { return false; }
+    const auto &data = slots_[slot]->data;
+    struct SearchData {
+        std::ofstream &ofs;
+        const std::vector<uint8_t> &data;
+    };
+    SearchData sd = {ofs, data};
+    kmpSearch(data.data(), data.size(), "\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12, [](int offset, void *data) {
+        auto &sd = *reinterpret_cast<SearchData*>(data);
+        sd.ofs.write((const char*)sd.data.data() + offset, 0x120);
+    }, &sd);
+    ofs.close();
+    return true;
+}
+
+bool SaveFile::importFaceFromFile(const std::string &filename, int slot) {
+    if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
+    std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) { return false; }
+    ifs.seekg(0, std::ios::end);
+    uint8_t face[0x120];
+    if (ifs.tellg() != 0x120) { ifs.close(); return false; }
+    ifs.seekg(0, std::ios::beg);
+    ifs.read((char*)face, 0x120);
+    ifs.close();
+    if (memcmp(face, "\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12) != 0) { return false; }
+
+    auto *slot2 = (CharSlot*)slots_[slot].get();
+    slot2->useridOffset = 0;
+    slot2->userid = 0;
+    findUserIDOffset(slot2, [slot2](int offset) {
+        slot2->useridOffset = offset;
+        slot2->userid = *(uint64_t*)&slot2->data[offset];
+    });
+
+    auto &data = slots_[slot]->data;
+    struct SearchData {
+        uint8_t *face;
+        std::vector<uint8_t> &data;
+    };
+    SearchData sd = {face, data};
+    kmpSearch(data.data(), data.size(), "\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12, [](int offset, void *data) {
+        auto &sd = *reinterpret_cast<SearchData*>(data);
+        memcpy(sd.data.data() + offset, sd.face, 0x120);
+    }, &sd);
+    std::fstream fs(filename_, std::ios::in | std::ios::out | std::ios::binary);
+    fs.seekg(slot2->offset, std::ios::beg);
+    md5Hash(data.data(), data.size(), slot2->md5hash);
+    if (saveType_ == Steam)
+        fs.write((const char*)slot2->md5hash, 16);
+    fs.write((const char*)data.data(), data.size());
+    fs.close();
+    return true;
+}
+
 void SaveFile::listSlots(int slot, const std::function<void(int, const SaveSlot&)> &func) {
 #if defined(USE_CLI)
     fprintf(stdout, "SaveType: %s\n", saveType_ == Steam ? "Steam" : "PS4");
