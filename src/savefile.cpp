@@ -194,7 +194,13 @@ bool SaveFile::importFromFile(const std::string &filename, int slot) {
     std::fstream fs(filename_, std::ios::in | std::ios::out | std::ios::binary);
 
     auto offset = findLevelOffset(data);
-    slot2->level = *(uint16_t*)&data[offset];
+    if (offset >= 0x2C) {
+        slot2->level = *(uint16_t*)(slot2->data.data() + offset);
+        memcpy(slot2->stats, slot2->data.data() + offset - 0x2C, 8 * sizeof(uint32_t));
+    } else {
+        slot2->level = 0;
+        memset(slot2->stats, 0, sizeof(slot2->stats));
+    }
     if (offset >= 0) {
         for (auto &s: slots_) {
             if (s->slotType == SaveSlot::Summary) {
