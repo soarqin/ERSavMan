@@ -35,7 +35,7 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager"),
         wxFileName filename(wxStandardPaths::Get().GetUserConfigDir(), "");
         filename.AppendDir("EldenRing");
         wxFileDialog fileDlg(this, "Select save file to open...", filename.GetAbsolutePath(), wxEmptyString,
-                             "Steam Save File (*.sl2)|*.sl2|Seamless Co-op Save File (*.co2)|*.co2|PS4 Save File (memory.dat)|memory.dat",
+                             "All supported formats (*.sl2;*.co2;memory.dat)|*.sl2;*.co2;memory.dat|Steam Save File (*.sl2)|*.sl2|Seamless Co-op Save File (*.co2)|*.co2|PS4 Save File (memory.dat)|memory.dat",
                              wxFD_OPEN | wxFD_SHOW_HIDDEN | wxFD_FILE_MUST_EXIST);
         if (fileDlg.ShowModal() == wxID_CANCEL) return;
         auto *save = new(std::nothrow) SaveFile(fileDlg.GetPath().utf8_string());

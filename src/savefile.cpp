@@ -259,14 +259,7 @@ bool SaveFile::importFaceFromFile(const std::string &filename, int slot) {
     if (memcmp(face, "\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12) != 0) { return false; }
 
     auto *slot2 = (CharSlot*)slots_[slot].get();
-    slot2->useridOffset = 0;
-    slot2->userid = 0;
-    findUserIDOffset(slot2, [slot2](int offset) {
-        slot2->useridOffset = offset;
-        slot2->userid = *(uint64_t*)&slot2->data[offset];
-    });
-
-    auto &data = slots_[slot]->data;
+    auto &data = slot2->data;
     struct SearchData {
         uint8_t *face;
         std::vector<uint8_t> &data;
@@ -276,7 +269,20 @@ bool SaveFile::importFaceFromFile(const std::string &filename, int slot) {
         auto &sd = *reinterpret_cast<SearchData*>(data);
         memcpy(sd.data.data() + offset, sd.face, 0x120);
     }, &sd);
+
     std::fstream fs(filename_, std::ios::in | std::ios::out | std::ios::binary);
+
+    for (auto &s: slots_) {
+        if (s->slotType == SaveSlot::Summary) {
+            memcpy(&s->data[0x195E + 0x24C * slot + 0x3A], face, 0x120);
+            md5Hash(s->data.data(), s->data.size(), s->md5hash);
+            fs.seekg(s->offset, std::ios::beg);
+            if (saveType_ == Steam)
+                fs.write((const char*)s->md5hash, 16);
+            fs.write((const char*)s->data.data(), s->data.size());
+            break;
+        }
+    }
     fs.seekg(slot2->offset, std::ios::beg);
     md5Hash(data.data(), data.size(), slot2->md5hash);
     if (saveType_ == Steam)
