@@ -8,10 +8,11 @@
 
 #include "mainwnd.h"
 #include "savefile.h"
+#include "version.h"
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 
-MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager"),
+MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VERSION_STR),
                             wxDefaultPosition, wxSize(600, 300)) {
     wxInitAllImageHandlers();
     wxToolTip::Enable(true);

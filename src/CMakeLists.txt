@@ -1,15 +1,15 @@
 project(ERSM CXX)
 
 # wxWidget options
-set(WXWIDGETS_PREFIX "" CACHE STRING "wxWidgets ROOT dir")
-option(WXWIDGETS_STATIC "wxWidgets link static libaries" OFF)
+set(wxWidgets_PREFIX "" CACHE STRING "wxWidgets ROOT dir")
+option(wxWidgets_STATIC "wxWidgets link static libaries" OFF)
 
 # find wxWidget
-if(WXWIDGETS_PREFIX)
-    set(wxWidgets_CONFIG_OPTIONS --prefix=${WXWIDGETS_PREFIX})
+if(wxWidgets_PREFIX)
+    set(wxWidgets_CONFIG_OPTIONS --prefix=${wxWidgets_PREFIX})
 endif()
 set(wxWidgets_USE_UNICODE ON)
-set(wxWidgets_USE_STATIC ${WXWIDGETS_STATIC})
+set(wxWidgets_USE_STATIC ${wxWidgets_STATIC})
 find_package(wxWidgets REQUIRED COMPONENTS core base)
 include(${wxWidgets_USE_FILE})
 
@@ -20,25 +20,22 @@ if(MSVC)
 else()
     set(CMAKE_REQUIRED_FLAGS "-mavx2")
 endif()
-check_cxx_source_runs("
-        #include <immintrin.h>
-        int main()
-        {
-          __m256i a, b, c;
-          const int src[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-          int dst[8];
-          a =  _mm256_loadu_si256( (__m256i*)src );
-          b =  _mm256_loadu_si256( (__m256i*)src );
-          c = _mm256_add_epi32( a, b );
-          _mm256_storeu_si256( (__m256i*)dst, c );
-          for( int i = 0; i < 8; i++ ){
-            if( ( src[i] + src[i] ) != dst[i] ){
-              return -1;
-            }
-          }
-          return 0;
-        }"
-    HAVE_AVX2_EXTENSIONS)
+check_cxx_source_runs("#include <immintrin.h>
+int main() {
+    __m256i a, b, c;
+    const int src[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int dst[8];
+    a =  _mm256_loadu_si256((__m256i*)src);
+    b =  _mm256_loadu_si256((__m256i*)src);
+    c = _mm256_add_epi32(a, b);
+    _mm256_storeu_si256((__m256i*)dst, c);
+    for(int i = 0; i < 8; i++) {
+        if((src[i] + src[i]) != dst[i]) {
+            return -1;
+        }
+    }
+    return 0;
+}" HAVE_AVX2_EXTENSIONS)
 
 # build
 if(HAVE_AVX2_EXTENSIONS)
