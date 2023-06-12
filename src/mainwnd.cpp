@@ -156,7 +156,11 @@ void MainWnd::updateList() {
         auto &slot2 = (CharSlot&)slot;
         if (slot2.charname.empty()) return;
         auto idx = charList_->InsertItem(index, wxString::Format("%d", index + 1));
-        charList_->SetItem(idx, 1, slot2.charname);
+        if (slot2.available) {
+            charList_->SetItem(idx, 1, slot2.charname);
+        } else {
+            charList_->SetItem(idx, 1, slot2.charname + L" [Deleted]");
+        }
         charList_->SetItem(idx, 2, wxString::Format("%d", slot2.level));
         charList_->SetItemData(idx, index);
         if (index == slotIdx) {

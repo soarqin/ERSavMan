@@ -148,9 +148,11 @@ SaveFile::SaveFile(const std::string &filename) {
                 if (slots_[i]->slotType == SaveSlot::Character) {
                     auto level = *(uint16_t*)&slot2->data[0x195E + 0x24C * i + 0x22];
                     if (level == 0) continue;
+                    uint8_t available = *(uint8_t*)&slot2->data[0x1954 + i];
                     auto *slot3 = (CharSlot *)slots_[i].get();
                     readWString(slot3->charname, (const uint16_t *)&slot2->data[0x195E + 0x24C * i]);
                     slot3->level = level;
+                    slot3->available = available;
                 }
             }
             break;

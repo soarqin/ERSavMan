@@ -21,22 +21,23 @@ struct SaveSlot {
         Other,
     };
     SlotType slotType;
-    uint32_t offset;
+    uint32_t offset = 0;
     std::vector<uint8_t> data;
-    uint8_t md5hash[16];
+    uint8_t md5hash[16] = {};
     std::wstring filename;
 };
 
 struct CharSlot: SaveSlot {
     std::wstring charname;
-    uint16_t level;
-    uint32_t stats[8];
-    int useridOffset;
-    uint64_t userid;
+    uint16_t level = 0;
+    uint32_t stats[8] = {};
+    int useridOffset = 0;
+    uint64_t userid = 0;
+    bool available = false;
 };
 
 struct SummarySlot: SaveSlot {
-    uint64_t userid;
+    uint64_t userid = 0;
 };
 
 class SaveFile {
