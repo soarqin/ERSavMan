@@ -17,7 +17,7 @@
 #include <malloc.h>
 #endif
 
-void kmpSearch(const void *full, int fullLen, const void *sub, int subLen, void (*func)(int, void*), void *userp) {
+void kmpSearch(const void *full, size_t fullLen, const void *sub, size_t subLen, void (*func)(int, void*), void *userp) {
     int i, j, len;
     const auto *haystack = (const uint8_t *)full;
     const auto *needle = (const uint8_t *)sub;
@@ -64,7 +64,7 @@ void kmpSearch(const void *full, int fullLen, const void *sub, int subLen, void 
     }
 }
 
-void md5Hash(const void *buf, int len, uint8_t output[16]) {
+void md5Hash(const void *buf, size_t len, uint8_t output[16]) {
 #if defined(__AVX2__)
     md5_simd::MD5_SIMD md5;
     const auto *n = (const char*)buf;

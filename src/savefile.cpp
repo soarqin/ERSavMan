@@ -34,17 +34,17 @@ inline void findUserIDOffset(CharSlot *slot, const std::function<void(int offset
     }, &param);
 }
 
-inline int findLevelOffset(const std::vector<uint8_t> &data) {
+inline size_t findLevelOffset(const std::vector<uint8_t> &data) {
     const auto *ptr = data.data();
-    int sz = data.size() - 0x30;
-    for (int i = 0; i < sz; ++i) {
+    size_t sz = data.size() - 0x30;
+    for (size_t i = 0; i < sz; ++i) {
         if (*(int*)(ptr + i) + *(int*)(ptr + i + 4) + *(int*)(ptr + i + 8) + *(int*)(ptr + i + 12) +
             *(int*)(ptr + i + 16) + *(int*)(ptr + i + 20) + *(int*)(ptr + i + 24) + *(int*)(ptr + i + 28)
             == 79 + *(int*)(ptr + i + 44)) {
             return i + 44;
         }
     }
-    return -1;
+    return 0;
 }
 
 SaveFile::SaveFile(const std::string &filename) {
@@ -111,7 +111,7 @@ SaveFile::SaveFile(const std::string &filename) {
                 slot->slotType = SaveSlot::Other;
                 slotSize = 0x240010;
             }
-            slot->offset = fs.tellg();
+            slot->offset = static_cast<uint32_t>(fs.tellg());
             slot->data.resize(slotSize);
             fs.read((char*)slot->data.data(), slotSize);
             slots_[i] = std::move(slot);

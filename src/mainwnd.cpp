@@ -13,13 +13,13 @@
 #include <wx/stdpaths.h>
 
 MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VERSION_STR),
-                            wxDefaultPosition, wxSize(600, 300)) {
+                            wxDefaultPosition, wxSize(800, 450)) {
     wxInitAllImageHandlers();
     wxToolTip::Enable(true);
     wxToolTip::SetAutoPop(500);
     Centre();
     wxWindow::SetBackgroundColour(wxColour(243, 243, 243));
-    wxFont font(9, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, "Couriers New");
+    wxFont font(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_MEDIUM, false, "Segoe UI");
     wxWindow::SetFont(font);
     auto *mainSizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(mainSizer);
@@ -32,7 +32,7 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VE
     leftSizer->Add(panelSizer, wxSizerFlags(0).Expand());
 
     auto *btn = new wxButton(this, wxID_ANY, "&Load", wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
-    btn->Bind(wxEVT_BUTTON, [rightSizer, this](const wxCommandEvent&) {
+    btn->Bind(wxEVT_BUTTON, [mainSizer, this](const wxCommandEvent&) {
         wxFileName filename(wxStandardPaths::Get().GetUserConfigDir(), "");
         filename.AppendDir("EldenRing");
         wxFileDialog fileDlg(this, "Select save file to open...", filename.GetAbsolutePath(), wxEmptyString,
@@ -51,13 +51,13 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VE
         filenameText_->SetLabel(fileDlg.GetPath());
         uint64_t userid = 0;
         if (save->saveType() == SaveFile::Steam) {
-            save->listSlots(-1, [&](int, const SaveSlot &slot) {
+            save->listSlots(-1, [&userid](int, const SaveSlot &slot) {
                 if (slot.slotType != SaveSlot::Summary) return;
                 userid = ((SummarySlot&)slot).userid;
             });
         }
         saveTypeText_->SetLabel(save->saveType() == SaveFile::Steam ? wxString::Format("Steam Save | UserID: %llu", userid) : wxString("PS4 Save"));
-        rightSizer->Layout();
+        mainSizer->Layout();
         updateList();
     });
     panelSizer->Add(btn, wxSizerFlags().Expand());
