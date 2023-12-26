@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <cstring>
+#include <cstdint>
 
 #include <immintrin.h>
 

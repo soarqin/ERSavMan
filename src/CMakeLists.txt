@@ -43,7 +43,7 @@ if(HAVE_AVX2_EXTENSIONS)
 else()
     set(MD5_SRC md5.c md5.h)
 endif()
-add_executable(${PROJECT_NAME} main.cpp ${MD5_SRC}
+add_executable(${PROJECT_NAME} WIN32 main.cpp ${MD5_SRC}
     mem.cpp mem.h
     savefile.cpp savefile.h
     mainwnd.cpp mainwnd.h)
