@@ -1,14 +1,15 @@
-cmake_minimum_required(VERSION 3.13)
-project(ERSavMan)
+set(CMAKE_WARN_DEPRECATED OFF CACHE INTERNAL "")
 
-set(CMAKE_CXX_STANDARD_REQUIRED 17)
+cmake_minimum_required(VERSION 3.21)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(GlobalOptions)
+add_global_options()
 include(CustomCompilerOptions)
 fix_compile_flags()
-fix_release_flags()
-add_static_runtime_option()
+fix_release_flags(STRIP_BINARY ON USE_LTO OFF USE_STATIC_CRT ON)
+include(ProjectMacros)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+project(ERSavMan)
 
 add_subdirectory(src)

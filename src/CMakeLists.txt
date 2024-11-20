@@ -1,25 +1,23 @@
-project(ERSM CXX)
+cmake_minimum_required(VERSION 3.28)
 
-# wxWidget options
-set(wxWidgets_PREFIX "" CACHE STRING "wxWidgets ROOT dir")
-option(wxWidgets_STATIC "wxWidgets link static libaries" OFF)
-
-# find wxWidget
-if(wxWidgets_PREFIX)
-    set(wxWidgets_CONFIG_OPTIONS --prefix=${wxWidgets_PREFIX})
-endif()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(wxWidgets_USE_DEBUG ON)
+    set(wxWidgets_USE_STATIC OFF)
+else ()
+    set(wxWidgets_USE_DEBUG OFF)
+    set(wxWidgets_USE_STATIC ON)
+endif ()
 set(wxWidgets_USE_UNICODE ON)
-set(wxWidgets_USE_STATIC ${wxWidgets_STATIC})
 find_package(wxWidgets REQUIRED COMPONENTS core base)
 include(${wxWidgets_USE_FILE})
 
 # Check for AVX2 support
 include(CheckCXXSourceRuns)
-if(MSVC)
+if (MSVC)
     set(CMAKE_REQUIRED_FLAGS "/arch:AVX2")
-else()
+else ()
     set(CMAKE_REQUIRED_FLAGS "-mavx2")
-endif()
+endif ()
 check_cxx_source_runs("#include <immintrin.h>
 int main() {
     __m256i a, b, c;
@@ -38,25 +36,31 @@ int main() {
 }" HAVE_AVX2_EXTENSIONS)
 
 # build
-if(HAVE_AVX2_EXTENSIONS)
+if (HAVE_AVX2_EXTENSIONS)
     set(MD5_SRC md5_simd.cpp md5_simd.h)
-else()
+else ()
     set(MD5_SRC md5.c md5.h)
-endif()
-add_executable(${PROJECT_NAME} WIN32 main.cpp ${MD5_SRC}
+endif ()
+add_project(ERSM WIN32 main.cpp ${MD5_SRC}
     mem.cpp mem.h
     savefile.cpp savefile.h
-    mainwnd.cpp mainwnd.h)
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    OUTPUT_NAME ERSavMan
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    FOLDER app)
+    mainwnd.cpp mainwnd.h
+
+    res/manifest.rc
+
+    FOLDER "app"
+    OUTPUT_NAME "ERSavMan")
+
+if (HAVE_AVX2_EXTENSIONS)
+    if (MSVC)
+        target_compile_options(${PROJECT_NAME} PUBLIC /arch:AVX2)
+    else ()
+        target_compile_options(${PROJECT_NAME} PUBLIC -mavx2)
+    endif ()
+endif ()
+
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
-if(HAVE_AVX2_EXTENSIONS)
-    if(MSVC)
-        target_compile_options(${PROJECT_NAME} PUBLIC /arch:AVX2)
-    else()
-        target_compile_options(${PROJECT_NAME} PUBLIC -mavx2)
-    endif()
-endif()
+if (wxWidgets_LIB_DIR MATCHES "_lib$")
+    target_link_libraries(${PROJECT_NAME} gdiplus msimg32)
+endif ()

@@ -18,7 +18,6 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VE
     wxToolTip::Enable(true);
     wxToolTip::SetAutoPop(500);
     Centre();
-    wxWindow::SetBackgroundColour(wxColour(243, 243, 243));
     wxFont font(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_MEDIUM, false, "Segoe UI");
     wxWindow::SetFont(font);
     auto *mainSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -39,7 +38,7 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VE
                              "All supported formats (*.sl2;*.co2;memory.dat)|*.sl2;*.co2;memory.dat|Steam Save File (*.sl2)|*.sl2|Seamless Co-op Save File (*.co2)|*.co2|PS4 Save File (memory.dat)|memory.dat",
                              wxFD_OPEN | wxFD_SHOW_HIDDEN | wxFD_FILE_MUST_EXIST);
         if (fileDlg.ShowModal() == wxID_CANCEL) return;
-        auto *save = new(std::nothrow) SaveFile(fileDlg.GetPath().utf8_string());
+        auto *save = new(std::nothrow) SaveFile(fileDlg.GetPath().ToStdWstring());
         if (!save || !save->ok()) {
             delete save;
             save = nullptr;
@@ -71,7 +70,7 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VE
                              wxFileSelectorDefaultWildcardStr,wxFD_SAVE | wxFD_SHOW_HIDDEN | wxFD_OVERWRITE_PROMPT);
         if (fileDlg.ShowModal() == wxID_CANCEL) return;
         auto slot = charList_->GetItemData(index);
-        savefile_->exportToFile(fileDlg.GetPath().utf8_string(), slot);
+        savefile_->exportToFile(fileDlg.GetPath().ToStdWstring(), slot);
     });
     panelSizer->Add(btn, wxSizerFlags().Expand());
     btnExport_ = btn;
@@ -85,7 +84,7 @@ MainWnd::MainWnd(): wxFrame(nullptr, wxID_ANY, wxT("ELDEN RING Save Manager " VE
                              wxFileSelectorDefaultWildcardStr,wxFD_OPEN | wxFD_SHOW_HIDDEN | wxFD_FILE_MUST_EXIST);
         if (fileDlg.ShowModal() == wxID_CANCEL) return;
         auto slot = charList_->GetItemData(index);
-        if (savefile_->importFromFile(fileDlg.GetPath().utf8_string(), slot)) {
+        if (savefile_->importFromFile(fileDlg.GetPath().ToStdWstring(), slot)) {
             updateList();
         }
     });
