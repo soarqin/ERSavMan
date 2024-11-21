@@ -23,30 +23,30 @@ inline void readWString(std::wstring &output, const uint16_t *input) {
 inline void findUserIDOffset(CharSlot *slot, const std::function<void(int offset)> &func) {
     size_t pointer = 0x1E0000;
     while (true) {
-        auto offset = boyer_moore(slot->data.data() + pointer, slot->data.size() - pointer, (const uint8_t *)"\x4D\x4F\x45\x47\x00\x26\x04\x21", 8);
-        if (offset == (size_t)-1) return;
+        auto offset = boyer_moore(slot->data.data() + pointer, slot->data.size() - pointer, reinterpret_cast<const uint8_t*>("\x4D\x4F\x45\x47\x00\x26\x04\x21"), 8);
+        if (offset == static_cast<size_t>(-1)) return;
         offset += 0x1E0000;
-        offset += *(int *)&slot->data[offset - 4];
+        offset += *reinterpret_cast<int*>(&slot->data[offset - 4]);
         offset += 4;
         if (memcmp(&slot->data[offset], "\x46\x4F\x45\x47\x00\x26\x04\x21", 8) != 0) {
             pointer = offset + 1;
             continue;
         }
-        offset += *(int *)&slot->data[offset - 4];
-        offset += *(int *)&slot->data[offset] + 4 + 0x20078;
-        func((int)offset);
+        offset += *reinterpret_cast<int*>(&slot->data[offset - 4]);
+        offset += *reinterpret_cast<int*>(&slot->data[offset]) + 4 + 0x20078;
+        func(static_cast<int>(offset));
         return;
     }
 }
 
-inline size_t findStatOffset(const std::vector<uint8_t> &data, int level, const wchar_t *name) {
+inline size_t findStatOffset(const std::vector<uint8_t> &data, const int level, const wchar_t *name) {
     const auto *ptr = data.data();
-    size_t sz = data.size() - 0x130;
+    const size_t sz = data.size() - 0x130;
     for (size_t i = 0; i < sz; ++i) {
-        auto nl = *(int*)(ptr + i + 0x2C);
-        if (nl == level && *(int*)(ptr + i) + *(int*)(ptr + i + 4) + *(int*)(ptr + i + 8) + *(int*)(ptr + i + 12) +
-            *(int*)(ptr + i + 16) + *(int*)(ptr + i + 20) + *(int*)(ptr + i + 24) + *(int*)(ptr + i + 28)
-            == 79 + nl && lstrcmpW(name, (const wchar_t*)(ptr + i + 0x60)) == 0) {
+        const auto nl = *reinterpret_cast<const int*>(ptr + i + 0x2C);
+        if (nl == level && *reinterpret_cast<const int*>(ptr + i) + *reinterpret_cast<const int*>(ptr + i + 4) + *reinterpret_cast<const int*>(ptr + i + 8) + *reinterpret_cast<const int*>(ptr + i + 12) +
+            *reinterpret_cast<const int*>(ptr + i + 16) + *reinterpret_cast<const int*>(ptr + i + 20) + *reinterpret_cast<const int*>(ptr + i + 24) + *reinterpret_cast<const int*>(ptr + i + 28)
+            == 79 + nl && lstrcmpW(name, reinterpret_cast<const wchar_t*>(ptr + i + 0x60)) == 0) {
             return i;
         }
     }
@@ -54,7 +54,7 @@ inline size_t findStatOffset(const std::vector<uint8_t> &data, int level, const 
 }
 
 SaveFile::SaveFile(const std::wstring &filename) {
-    std::ifstream stream(std::filesystem::path(filename), std::ios::in | std::ios::binary);
+    std::ifstream stream(filename.c_str(), std::ios::in | std::ios::binary);
     if (!stream.is_open()) return;
     load(stream);
     stream.close();
@@ -64,9 +64,9 @@ SaveFile::SaveFile(const std::wstring &filename) {
 SaveFile::SaveFile(const std::string &data, const std::wstring &saveAs) {
     std::istringstream stream(data, std::ios::in | std::ios::binary);
     load(stream);
-    std::ofstream ofs(std::filesystem::path(saveAs), std::ios::out | std::ios::binary);
+    std::ofstream ofs(saveAs.c_str(), std::ios::out | std::ios::binary);
     if (ofs.is_open()) {
-        ofs.write((const char*)data.data(), (int)data.size());
+        ofs.write((const char*)data.data(), static_cast<int>(data.size()));
         ofs.close();
     }
     if (ok_) filename_ = saveAs;
@@ -76,23 +76,24 @@ void SaveFile::load(std::istream &stream) {
     ok_ = false;
     header_.clear();
     slots_.clear();
+    faces_.clear();
     summarySlot_ = -1;
     uint32_t magic = 0;
-    stream.read((char*)&magic, sizeof(uint32_t));
+    stream.read(reinterpret_cast<char*>(&magic), sizeof(uint32_t));
     if (magic == 0x34444E42) {
         saveType_ = Steam;
         ok_ = true;
         stream.seekg(0, std::ios::beg);
         header_.resize(0x300);
-        stream.read((char*)header_.data(), 0x300);
-        int slotCount = *(int*)&header_[12];
+        stream.read(reinterpret_cast<char*>(header_.data()), 0x300);
+        const int slotCount = *reinterpret_cast<int*>(&header_[12]);
         slots_.resize(slotCount);
         for (int i = 0; i < slotCount; ++i) {
-            int slotSize = *(int*)&header_[0x48 + i * 0x20];
-            int slotOffset = *(int*)&header_[0x50 + i * 0x20];
-            int nameOffset = *(int*)&header_[0x54 + i * 0x20];
+            int slotSize = *reinterpret_cast<int*>(&header_[0x48 + i * 0x20]);
+            const int slotOffset = *reinterpret_cast<int*>(&header_[0x50 + i * 0x20]);
+            const int nameOffset = *reinterpret_cast<int*>(&header_[0x54 + i * 0x20]);
             std::wstring slotFilename;
-            readWString(slotFilename, (const uint16_t*)&header_[nameOffset]);
+            readWString(slotFilename, reinterpret_cast<const uint16_t*>(&header_[nameOffset]));
             std::unique_ptr<SaveSlot> slot;
             if (slotSize == 0x280010) {
                 slot = std::make_unique<CharSlot>();
@@ -108,10 +109,10 @@ void SaveFile::load(std::istream &stream) {
             slot->offset = slotOffset;
             slot->filename = slotFilename;
             stream.seekg(slotOffset, std::ios::beg);
-            stream.read((char*)slot->md5hash, 16);
+            stream.read(reinterpret_cast<char*>(slot->md5hash), 16);
             slotSize -= 16;
             slot->data.resize(slotSize);
-            stream.read((char*)slot->data.data(), slotSize);
+            stream.read(reinterpret_cast<char*>(slot->data.data()), slotSize);
             slots_[i] = std::move(slot);
         }
     } else if (magic == 0x2C9C01CB) {
@@ -119,7 +120,7 @@ void SaveFile::load(std::istream &stream) {
         ok_ = true;
         stream.seekg(0, std::ios::beg);
         header_.resize(0x70);
-        stream.read((char*)header_.data(), 0x70);
+        stream.read(reinterpret_cast<char*>(header_.data()), 0x70);
         slots_.resize(12);
         for (int i = 0; i < 12; ++i) {
             std::unique_ptr<SaveSlot> slot;
@@ -140,7 +141,7 @@ void SaveFile::load(std::istream &stream) {
             }
             slot->offset = static_cast<uint32_t>(stream.tellg());
             slot->data.resize(slotSize);
-            stream.read((char*)slot->data.data(), slotSize);
+            stream.read(reinterpret_cast<char*>(slot->data.data()), slotSize);
             slots_[i] = std::move(slot);
         }
     } else {
@@ -150,20 +151,20 @@ void SaveFile::load(std::istream &stream) {
         auto &slot = slots_[idx];
         switch (slot->slotType) {
             case SaveSlot::Character: {
-                auto *slot2 = (CharSlot *)slot.get();
+                auto *slot2 = dynamic_cast<CharSlot*>(slot.get());
                 slot2->useridOffset = 0;
                 slot2->userid = 0;
-                findUserIDOffset(slot2, [slot2](int offset) {
+                findUserIDOffset(slot2, [slot2](const int offset) {
                     slot2->useridOffset = offset;
-                    slot2->userid = *(uint64_t*)&slot2->data[offset];
+                    slot2->userid = *reinterpret_cast<uint64_t*>(&slot2->data[offset]);
                 });
                 auto &summaryData = slots_[summarySlot_]->data;
-                auto rlevel = *(int*)&summaryData[0x195E + 0x24C * idx + 0x22];
-                const auto *rname = (const wchar_t *)&summaryData[0x195E + 0x24C * idx];
-                auto offset = findStatOffset(slot2->data, rlevel, rname);
+                const auto rlevel = *reinterpret_cast<int*>(&summaryData[0x195E + 0x24C * idx + 0x22]);
+                const auto *rname = reinterpret_cast<const wchar_t*>(&summaryData[0x195E + 0x24C * idx]);
+                const auto offset = findStatOffset(slot2->data, rlevel, rname);
                 if (offset > 0) {
-                    slot2->statOffset = (int)offset;
-                    slot2->level = *(uint16_t*)(slot2->data.data() + offset + 0x2C);
+                    slot2->statOffset = static_cast<int>(offset);
+                    slot2->level = *reinterpret_cast<uint16_t*>(slot2->data.data() + offset + 0x2C);
                     memcpy(slot2->stats, slot2->data.data() + offset, 8 * sizeof(uint32_t));
                 } else {
                     slot2->statOffset = 0;
@@ -173,15 +174,22 @@ void SaveFile::load(std::istream &stream) {
                 break;
             }
             case SaveSlot::Summary: {
-                auto *slot2 = (SummarySlot *)slot.get();
-                slot2->userid = *(uint64_t *)&slot2->data[4];
+                auto *slot2 = dynamic_cast<SummarySlot*>(slot.get());
+                slot2->userid = *reinterpret_cast<uint64_t*>(&slot2->data[4]);
+                if (const auto faceLen = *reinterpret_cast<uint32_t*>(&slot2->data[0x158]); faceLen == 0x11D0) {
+                    for (int i = 0; i < 15; i++) {
+                        auto faceData = std::make_unique<FaceData>();
+                        memcpy(faceData->data, &slot2->data[0x15C + 0x130 * i], 0x130);
+                        faces_.emplace_back(std::move(faceData));
+                    }
+                }
                 for (size_t i = 0; i < slots_.size(); ++i) {
                     if (slots_[i]->slotType == SaveSlot::Character) {
-                        auto level = *(uint16_t*)&slot2->data[0x195E + 0x24C * i + 0x22];
+                        const auto level = *reinterpret_cast<uint16_t*>(&slot2->data[0x195E + 0x24C * i + 0x22]);
                         if (level == 0) continue;
-                        uint8_t available = *(uint8_t*)&slot2->data[0x1954 + i];
-                        auto *slot3 = (CharSlot *)slots_[i].get();
-                        readWString(slot3->charname, (const uint16_t *)&slot2->data[0x195E + 0x24C * i]);
+                        const uint8_t available = *(uint8_t*)&slot2->data[0x1954 + i];
+                        auto *slot3 = dynamic_cast<CharSlot*>(slots_[i].get());
+                        readWString(slot3->charname, reinterpret_cast<const uint16_t*>(&slot2->data[0x195E + 0x24C * i]));
                         slot3->level = level;
                         slot3->available = available;
                     }
@@ -194,76 +202,76 @@ void SaveFile::load(std::istream &stream) {
     }
 }
 
-void SaveFile::resign(uint64_t userid) {
-    std::fstream fs(std::filesystem::path(filename_), std::ios::in | std::ios::out | std::ios::binary);
+void SaveFile::resign(const uint64_t userid) {
+    std::fstream fs(filename_.c_str(), std::ios::in | std::ios::out | std::ios::binary);
     if (!fs.is_open()) {
         return;
     }
     for (auto &slot: slots_) {
         auto &data = slot->data;
         if (slot->slotType == SaveSlot::Character) {
-            auto *slot2 = (CharSlot*)slot.get();
+            auto *slot2 = dynamic_cast<CharSlot*>(slot.get());
             slot2->userid = userid;
-            *(uint64_t*)&data[slot2->useridOffset] = userid;
+            *reinterpret_cast<uint64_t*>(&data[slot2->useridOffset]) = userid;
         } else if (slot->slotType == SaveSlot::Summary) {
-            auto *slot2 = (SummarySlot*)slot.get();
+            auto *slot2 = dynamic_cast<SummarySlot*>(slot.get());
             slot2->userid = userid;
-            *(uint64_t*)&data[4] = userid;
+            *reinterpret_cast<uint64_t*>(&data[4]) = userid;
         }
         fs.seekg(slot->offset, std::ios::beg);
         md5Hash(data.data(), data.size(), slot->md5hash);
         if (saveType_ == Steam)
-            fs.write((const char*)slot->md5hash, 16);
-        fs.write((const char*)data.data(), (int)data.size());
+            fs.write(reinterpret_cast<const char*>(slot->md5hash), 16);
+        fs.write(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
     }
     fs.close();
 }
 
-bool SaveFile::resign(int slot, uint64_t userid) {
+bool SaveFile::resign(const int slot, const uint64_t userid) const {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
-    std::fstream fs(std::filesystem::path(filename_), std::ios::in | std::ios::out | std::ios::binary);
+    std::fstream fs(filename_.c_str(), std::ios::in | std::ios::out | std::ios::binary);
     if (!fs.is_open()) {
         return false;
     }
     {
-        auto *slot2 = (CharSlot*)slots_[slot].get();
+        auto *slot2 = dynamic_cast<CharSlot*>(slots_[slot].get());
         auto &data = slot2->data;
         slot2->userid = userid;
-        *(uint64_t*)&data[slot2->useridOffset] = userid;
+        *reinterpret_cast<uint64_t*>(&data[slot2->useridOffset]) = userid;
         fs.seekg(slot2->offset, std::ios::beg);
         md5Hash(data.data(), data.size(), slot2->md5hash);
         if (saveType_ == Steam)
-            fs.write((const char*)slot2->md5hash, 16);
-        fs.write((const char*)data.data(), (int)data.size());
+            fs.write(reinterpret_cast<const char*>(slot2->md5hash), 16);
+        fs.write(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
     }
     {
-        auto *slot2 = (SummarySlot*)slots_[summarySlot_].get();
+        auto *slot2 = dynamic_cast<SummarySlot*>(slots_[summarySlot_].get());
         auto &data = slot2->data;
         slot2->userid = userid;
-        *(uint64_t*)&data[4] = userid;
+        *reinterpret_cast<uint64_t*>(&data[4]) = userid;
         fs.seekg(slot2->offset, std::ios::beg);
         md5Hash(data.data(), data.size(), slot2->md5hash);
         if (saveType_ == Steam)
-            fs.write((const char*)slot2->md5hash, 16);
-        fs.write((const char*)data.data(), (int)data.size());
+            fs.write(reinterpret_cast<const char*>(slot2->md5hash), 16);
+        fs.write(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
     }
     fs.close();
     return true;
 }
 
-void SaveFile::patchSlotTime(int slot, uint32_t millisec) {
+void SaveFile::patchSlotTime(const int slot, const uint32_t millisec) const {
     {
         auto &s = slots_[slot];
         if (s->slotType != SaveSlot::Character) { return; }
-        *(uint32_t *)(s->data.data() + 8) = millisec;
+        *reinterpret_cast<uint32_t*>(s->data.data() + 8) = millisec;
     }
     {
         auto &s = slots_[summarySlot_];
-        *(uint16_t *)&s->data[0x195E + 0x24C * slot + 0x22 + 0x04] = millisec / 1000;
+        *reinterpret_cast<uint16_t*>(&s->data[0x195E + 0x24C * slot + 0x22 + 0x04]) = millisec / 1000;
     }
 }
 
-bool SaveFile::exportTo(std::vector<uint8_t> &buf, int slot) {
+bool SaveFile::exportTo(std::vector<uint8_t> &buf, const int slot) const {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
     const auto &data = slots_[slot]->data;
     buf.resize(data.size() + 0x24C);
@@ -273,19 +281,19 @@ bool SaveFile::exportTo(std::vector<uint8_t> &buf, int slot) {
     return true;
 }
 
-bool SaveFile::exportToFile(const std::wstring &filename, int slot) {
+bool SaveFile::exportToFile(const std::wstring &filename, const int slot) const {
     std::vector<uint8_t> buf;
     if (!exportTo(buf, slot)) return false;
-    std::ofstream ofs(std::filesystem::path(filename), std::ios::out | std::ios::binary);
+    std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::binary);
     if (!ofs.is_open()) { return false; }
-    ofs.write((const char*)buf.data(), (int)buf.size());
+    ofs.write(reinterpret_cast<const char*>(buf.data()), static_cast<int>(buf.size()));
     ofs.close();
     return true;
 }
 
-bool SaveFile::importFrom(const std::vector<uint8_t> &buf, int slot, const std::function<void()>& beforeResign, bool keepFace) {
+bool SaveFile::importFrom(const std::vector<uint8_t> &buf, const int slot, const std::function<void()>& beforeResign, const bool keepFace) const {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
-    auto *slot2 = (CharSlot*)slots_[slot].get();
+    auto *slot2 = dynamic_cast<CharSlot*>(slots_[slot].get());
     auto &data = slot2->data;
     if (buf.size() != data.size() + 0x24C) { return false; }
 
@@ -297,18 +305,18 @@ bool SaveFile::importFrom(const std::vector<uint8_t> &buf, int slot, const std::
 
     slot2->useridOffset = 0;
     slot2->userid = 0;
-    findUserIDOffset(slot2, [slot2](int offset) {
+    findUserIDOffset(slot2, [slot2](const int offset) {
         slot2->useridOffset = offset;
-        slot2->userid = *(uint64_t*)&slot2->data[offset];
+        slot2->userid = *reinterpret_cast<uint64_t*>(&slot2->data[offset]);
     });
 
     auto *ndata = buf.data() + data.size();
-    auto level = *(int*)(ndata + 0x22);
-    const auto *name = (const wchar_t *)ndata;
-    auto offset = findStatOffset(data, level, name);
+    const auto level = *reinterpret_cast<const int*>(ndata + 0x22);
+    const auto *name = reinterpret_cast<const wchar_t*>(ndata);
+    const auto offset = findStatOffset(data, level, name);
     if (offset > 0) {
-        slot2->statOffset = (int)offset;
-        slot2->level = *(uint16_t*)(slot2->data.data() + offset + 0x2C);
+        slot2->statOffset = static_cast<int>(offset);
+        slot2->level = *reinterpret_cast<uint16_t*>(slot2->data.data() + offset + 0x2C);
         memcpy(slot2->stats, slot2->data.data() + offset, 8 * sizeof(uint32_t));
     } else {
         slot2->statOffset = 0;
@@ -316,41 +324,40 @@ bool SaveFile::importFrom(const std::vector<uint8_t> &buf, int slot, const std::
         memset(slot2->stats, 0, sizeof(slot2->stats));
     }
 
-    auto *summary = (SummarySlot*)slots_[summarySlot_].get();
+    auto *summary = dynamic_cast<SummarySlot*>(slots_[summarySlot_].get());
     summary->data[0x1954 + slot] = 1;
-    summary->data[0x1334] = (int8_t)slot;
+    summary->data[0x1334] = static_cast<int8_t>(slot);
     memcpy(&summary->data[0x195E + 0x24C * slot], ndata, 0x24C);
     if (keepFace && !face.empty()) {
-        importFace(face, slot, false);
+        return importCharFace(face, slot, false);
     }
     if (beforeResign) {
         beforeResign();
     }
-    resign(slot, summary->userid);
-    return true;
+    return resign(slot, summary->userid);
 }
 
-bool SaveFile::importFromFile(const std::wstring &filename, int slot, const std::function<void()>& beforeResign, bool keepFace) {
+bool SaveFile::importFromFile(const std::wstring &filename, const int slot, const std::function<void()>& beforeResign, const bool keepFace) const {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
-    std::ifstream ifs(std::filesystem::path(filename), std::ios::in | std::ios::binary);
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
     if (!ifs.is_open()) { return false; }
     ifs.seekg(0, std::ios::end);
-    auto &data = slots_[slot]->data;
+    const auto &data = slots_[slot]->data;
     if (ifs.tellg() != data.size() + 0x24C) { ifs.close(); return false; }
     ifs.seekg(0, std::ios::beg);
     std::vector<uint8_t> buf(data.size() + 0x24C);
-    ifs.read((char*)buf.data(), (int)data.size() + 0x24C);
+    ifs.read(reinterpret_cast<char*>(buf.data()), static_cast<int>(data.size()) + 0x24C);
     ifs.close();
     return importFrom(buf, slot, beforeResign, keepFace);
 }
 
-bool SaveFile::exportFace(std::vector<uint8_t> &buf, int slot) {
+bool SaveFile::exportFace(std::vector<uint8_t> &buf, const int slot) const {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
     const auto &data = slots_[slot]->data;
     const auto *m = data.data();
-    auto offset = boyer_moore(m, data.size(), (const uint8_t *)"\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12);
+    const auto offset = boyer_moore(m, data.size(), reinterpret_cast<const uint8_t*>("\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00"), 12);
     buf.assign(m + offset, m + offset + 0x120);
-    const auto *s = (const CharSlot*)slots_[slot].get();
+    const auto *s = dynamic_cast<const CharSlot*>(slots_[slot].get());
     if (s->statOffset > 0)
         buf.push_back(data[s->statOffset + 0x82]);
     else
@@ -358,63 +365,125 @@ bool SaveFile::exportFace(std::vector<uint8_t> &buf, int slot) {
     return true;
 }
 
-bool SaveFile::exportFaceToFile(const std::wstring &filename, int slot) {
+bool SaveFile::exportCharFaceToFile(const std::wstring &filename, const int slot) const {
     std::vector<uint8_t> buf;
     if (!exportFace(buf, slot)) { return false; }
-    std::ofstream ofs(std::filesystem::path(filename), std::ios::out | std::ios::binary);
+    std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::binary);
     if (!ofs.is_open()) { return false; }
-    ofs.write((const char*)buf.data(), (int)buf.size());
+    ofs.write(reinterpret_cast<const char*>(buf.data()), static_cast<int>(buf.size()));
     ofs.close();
     return true;
 }
 
-bool SaveFile::importFace(const std::vector<uint8_t> &buf, int slot, bool resign) {
+bool SaveFile::importCharFace(const std::vector<uint8_t> &buf, const int slot, const bool resign) const {
     if (slot < 0 || slot >= slots_.size() || slots_[slot]->slotType != SaveSlot::Character) { return false; }
     if (memcmp(buf.data(), "\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12) != 0) { return false; }
-    auto sex = buf[0x120];
+    const auto sex = buf[0x120];
     if (sex == 0xFF) { return true; }
-    auto *slot2 = (CharSlot*)slots_[slot].get();
+    auto *slot2 = dynamic_cast<CharSlot*>(slots_[slot].get());
     if (slot2->statOffset == 0) { return false; }
     auto &data = slot2->data;
     auto *m = data.data();
-    auto offset = boyer_moore(m, data.size(), (const uint8_t *)"\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00", 12);
+    const auto offset = boyer_moore(m, data.size(), reinterpret_cast<const uint8_t*>("\x46\x41\x43\x45\x04\x00\x00\x00\x20\x01\x00\x00"), 12);
     memcpy(m + offset, buf.data(), 0x120);
     slot2->data[slot2->statOffset + 0x82] = sex;
     auto &s = slots_[summarySlot_];
     memcpy(&s->data[0x195E + 0x24C * slot + 0x22 + 0x18], buf.data(), 0x120);
     s->data[0x195E + 0x24C * slot + 0x242] = sex;
     if (resign) {
-        std::fstream fs(std::filesystem::path(filename_), std::ios::in | std::ios::out | std::ios::binary);
+        std::fstream fs(filename_.c_str(), std::ios::in | std::ios::out | std::ios::binary);
         if (!fs.is_open()) return false;
         md5Hash(s->data.data(), s->data.size(), s->md5hash);
         fs.seekg(s->offset, std::ios::beg);
         if (saveType_ == Steam)
-            fs.write((const char *)s->md5hash, 16);
-        fs.write((const char *)s->data.data(), (int)s->data.size());
+            fs.write(reinterpret_cast<const char*>(s->md5hash), 16);
+        fs.write(reinterpret_cast<const char*>(s->data.data()), static_cast<int>(s->data.size()));
         fs.seekg(slot2->offset, std::ios::beg);
         md5Hash(data.data(), data.size(), slot2->md5hash);
         if (saveType_ == Steam)
-            fs.write((const char *)slot2->md5hash, 16);
-        fs.write((const char *)data.data(), (int)data.size());
+            fs.write(reinterpret_cast<const char*>(slot2->md5hash), 16);
+        fs.write(reinterpret_cast<const char*>(data.data()), static_cast<int>(data.size()));
         fs.close();
     }
     return true;
 }
 
-bool SaveFile::importFaceFromFile(const std::wstring &filename, int slot, bool resign) {
-    std::ifstream ifs(std::filesystem::path(filename), std::ios::in | std::ios::binary);
+bool SaveFile::importCharFaceFromFile(const std::wstring &filename, const int slot, const bool resign) const {
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
     if (!ifs.is_open()) { return false; }
     ifs.seekg(0, std::ios::end);
     if (ifs.tellg() != 0x120) { ifs.close(); return false; }
     std::vector<uint8_t> face(0x120);
     ifs.seekg(0, std::ios::beg);
-    ifs.read((char*)face.data(), 0x120);
+    ifs.read(reinterpret_cast<char*>(face.data()), 0x120);
     ifs.close();
 
-    return importFace(face, slot, resign);
+    return importCharFace(face, slot, resign);
 }
 
-void SaveFile::listSlots(int slot, const std::function<void(int, const SaveSlot&)> &func) {
+bool SaveFile::exportFacesToFile(const std::wstring &filename, const std::vector<int> &slot) const {
+    if (slot.empty()) return false;
+    std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::binary);
+    if (!ofs.is_open()) return false;
+    for (const auto &s: slot) {
+        const auto &f = faces_[s];
+        ofs.write(reinterpret_cast<const char*>(f->data), 0x130);
+    }
+    ofs.close();
+    return true;
+}
+
+bool SaveFile::importFacesFromFile(const std::wstring &filename, int slot) {
+    bool findEmptySlot = slot < 0;
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) return false;
+    std::fstream fs(filename_.c_str(), std::ios::in | std::ios::out | std::ios::binary);
+    if (!fs.is_open()) return false;
+    auto *slot2 = dynamic_cast<SummarySlot*>(slots_[summarySlot_].get());
+    auto &data = slot2->data;
+
+    ifs.seekg(0, std::ios::end);
+    const auto sz = static_cast<int>(ifs.tellg());
+    if (sz % 0x130 != 0) { ifs.close(); return false; }
+    const auto count = sz / 0x130;
+    ifs.seekg(0, std::ios::beg);
+
+    for (int i = 0; i < count; ++i) {
+        auto faceData = std::make_unique<FaceData>();
+        ifs.read(reinterpret_cast<char*>(faceData->data), 0x130);
+        if (findEmptySlot) {
+            for (int j = 0; j < faces_.size(); ++j) {
+                if (!faces_[j]->available()) {
+                    slot = j;
+                    break;
+                }
+            }
+            if (slot < 0 || slot >= faces_.size())
+                break;
+        } else {
+            if (slot >= faces_.size())
+                break;
+        }
+        faces_[slot] = std::move(faceData);
+        memcpy(&data[0x15C + slot * 0x130], faces_[slot]->data, 0x130);
+
+        if (!findEmptySlot) {
+            slot++;
+        }
+    }
+
+    fs.seekg(slot2->offset, std::ios::beg);
+    md5Hash(data.data(), data.size(), slot2->md5hash);
+    if (saveType_ == Steam)
+        fs.write(reinterpret_cast<const char*>(slot2->md5hash), 16);
+    fs.write(reinterpret_cast<const char*>(data.data()), 0x11D0 + 0x158 + 4);
+
+    fs.close();
+    ifs.close();
+    return true;
+}
+
+void SaveFile::listSlots(int slot, const std::function<void(int, const SaveSlot&)> &func) const {
 #if defined(USE_CLI)
     fprintf(stdout, "SaveType: %s\n", saveType_ == Steam ? "Steam" : "PS4");
     if (saveType_ == Steam) {
@@ -429,21 +498,29 @@ void SaveFile::listSlots(int slot, const std::function<void(int, const SaveSlot&
         listSlot(slot);
     }
 #else
+    const auto sz = static_cast<int>(slots_.size());
     if (slot < 0) {
-        for (int i = 0; i < slots_.size(); ++i) {
+        for (int i = 0; i < sz; ++i) {
             func(i, *slots_[i]);
         }
-    } else if (slot < slots_.size()) {
+    } else if (slot < sz) {
         func(slot, *slots_[slot]);
     }
 #endif
 }
 
-void SaveFile::listSlot(int slot) {
+void SaveFile::listFaces(const std::function<void(int, const FaceData &)> &func) const {
+    const auto sz = static_cast<int>(faces_.size());
+    for (int i = 0; i < sz; ++i) {
+        func(i, *faces_[i]);
+    }
+}
+
+void SaveFile::listSlot(const int slot) const {
     auto &s = slots_[slot];
     switch (s->slotType) {
     case SaveSlot::Character: {
-        auto *slot2 = (CharSlot*)s.get();
+        const auto *slot2 = dynamic_cast<CharSlot*>(s.get());
         if (slot2->charname.empty()) break;
         fprintf(stdout, "%4d: %ls (Level %d)\n", slot, slot2->charname.c_str(), slot2->level);
         break;
@@ -459,23 +536,23 @@ void SaveFile::listSlot(int slot) {
 
 void SaveFile::fixHashes() {
     if (saveType_ != Steam) { return; }
-    std::fstream fs(std::filesystem::path(filename_), std::ios::in | std::ios::out | std::ios::binary);
-    uint8_t hash[16];
-    for (auto &slot: slots_) {
+    std::fstream fs(filename_.c_str(), std::ios::in | std::ios::out | std::ios::binary);
+    for (const auto &slot: slots_) {
+        uint8_t hash[16];
         md5Hash(slot->data.data(), slot->data.size(), hash);
         if (memcmp(hash, slot->md5hash, 16) != 0) {
             memcpy(slot->md5hash, hash, 16);
             fs.seekg(slot->offset, std::ios::beg);
-            fs.write((const char*)hash, 16);
+            fs.write(reinterpret_cast<const char*>(hash), 16);
         }
     }
     fs.close();
 }
 
-bool SaveFile::verifyHashes() {
+bool SaveFile::verifyHashes() const {
     if (saveType_ != Steam) { return true; }
-    uint8_t hash[16];
     for (auto &slot: slots_) {
+        uint8_t hash[16];
         md5Hash(slot->data.data(), slot->data.size(), hash);
         if (memcmp(hash, slot->md5hash, 16) != 0) {
             return false;

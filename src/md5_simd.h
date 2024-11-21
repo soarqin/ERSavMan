@@ -340,13 +340,13 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, true>(std::string text[MD5
     reset();
 
     // get number of 64-char chunks the input will make
-    uint64_t index = (text[0].length() / 64) + (text[0].length() % 64 < 56 ? 0 : 1);
+    const uint64_t index = (text[0].length() / 64) + (text[0].length() % 64 < 56 ? 0 : 1);
 
     // check the other inputs to make sure they use the same number of 64-char chunks
     check_lengths(index, text);
 
     // calculate how many chars the inputs will each require (they should all require the same)
-    uint64_t total_chars = index * 64 + 64;
+    const uint64_t total_chars = index * 64 + 64;
 
     // expand the input buffers if they are not big enough
     expand_buffers(total_chars);
@@ -369,10 +369,10 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, false>(std::string text[MD
     reset();
 
     // get number of 64-char chunks the input will make
-    uint64_t index = (text[0].length() / 64) + (text[0].length() % 64 < 56 ? 0 : 1);
+    const uint64_t index = (text[0].length() / 64) + (text[0].length() % 64 < 56 ? 0 : 1);
 
     // calculate how many chars the inputs will each require (they should all require the same)
-    uint64_t total_chars = index * 64 + 64;
+    const uint64_t total_chars = index * 64 + 64;
 
     // expand the input buffers if they are not big enough
     expand_buffers(total_chars);
@@ -395,13 +395,13 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, true>(char *text[MD5_SIMD:
     reset();
 
     // get number of 64-char chunks the input will make
-    uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
+    const uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
 
     // check the other inputs to make sure they use the same number of 64-char chunks
     check_lengths(index, length);
 
     // calculate how many chars the inputs will each require (they should all require the same)
-    uint64_t total_chars = index * 64 + 64;
+    const uint64_t total_chars = index * 64 + 64;
 
     // expand the input buffers if they are not big enough
     expand_buffers(total_chars);
@@ -425,10 +425,10 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, false>(char *text[MD5_SIMD
     reset();
 
     // get number of 64-char chunks the input will make
-    uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
+    const uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
 
     // calculate how many chars the inputs will each require (they should all require the same)
-    uint64_t total_chars = index * 64 + 64;
+    const uint64_t total_chars = index * 64 + 64;
 
     // expand the input buffers if they are not big enough
     expand_buffers(total_chars);
@@ -451,13 +451,13 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, true>(const char *text[MD5
     reset();
 
     // get number of 64-char chunks the input will make
-    uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
+    const uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
 
     // check the other inputs to make sure they use the same number of 64-char chunks
     check_lengths(index, length);
 
     // calculate how many chars the inputs will each require (they should all require the same)
-    uint64_t total_chars = index * 64 + 64;
+    const uint64_t total_chars = index * 64 + 64;
 
     // expand the input buffers if they are not big enough
     expand_buffers(total_chars);
@@ -481,10 +481,10 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, false>(const char *text[MD
     reset();
 
     // get number of 64-char chunks the input will make
-    uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
+    const uint64_t index = (length[0] / 64) + (length[0] % 64 < 56 ? 0 : 1);
 
     // calculate how many chars the inputs will each require (they should all require the same)
-    uint64_t total_chars = index * 64 + 64;
+    const uint64_t total_chars = index * 64 + 64;
 
     // expand the input buffers if they are not big enough
     expand_buffers(total_chars);
@@ -499,9 +499,9 @@ inline void MD5_SIMD::calculate<MD5_SIMD::HASH_COUNT, false>(const char *text[MD
     finalize();
 }
 
-inline void MD5_SIMD::check_lengths(uint64_t index, std::string text[]) {
+inline void MD5_SIMD::check_lengths(const uint64_t index, std::string text[]) {
     for (int i = 1; i < HASH_COUNT; i++) {
-        uint64_t tmp_index = (text[i].length() / 64) + (text[i].length() % 64 < 56 ? 0 : 1);
+        const uint64_t tmp_index = (text[i].length() / 64) + (text[i].length() % 64 < 56 ? 0 : 1);
         if (index != tmp_index) {
             throw
                 std::runtime_error("Lengths must be similar");
@@ -509,9 +509,9 @@ inline void MD5_SIMD::check_lengths(uint64_t index, std::string text[]) {
     }
 }
 
-inline void MD5_SIMD::check_lengths(uint64_t index, uint64_t length[]) {
+inline void MD5_SIMD::check_lengths(const uint64_t index, uint64_t length[]) {
     for (int i = 1; i < HASH_COUNT; i++) {
-        uint64_t tmp_index = (length[i] / 64) + (length[i] % 64 < 56 ? 0 : 1);
+        const uint64_t tmp_index = (length[i] / 64) + (length[i] % 64 < 56 ? 0 : 1);
         if (index != tmp_index) {
             throw
                 std::runtime_error("Lengths must be similar");
@@ -519,7 +519,7 @@ inline void MD5_SIMD::check_lengths(uint64_t index, uint64_t length[]) {
     }
 }
 
-inline void MD5_SIMD::expand_buffers(uint64_t total_chars) {
+inline void MD5_SIMD::expand_buffers(const uint64_t total_chars) {
     if (total_chars > input_buffer_size) {
         for (int i = 0; i < HASH_COUNT; i++) {
             delete[]
@@ -550,7 +550,7 @@ inline void MD5_SIMD::pad_all_inputs(const char *text[], uint64_t length[]) {
 
 // checks whether the specified hash has N leading zero chars
 template<int N>
-inline bool MD5_SIMD::check_zeroes(int index) {
+inline bool MD5_SIMD::check_zeroes(const int index) {
     // https://stackoverflow.com/questions/66091420/how-to-best-emulate-the-logical-meaning-of-mm-slli-si128-128-bit-bit-shift-n
     static_assert(N > 0 && N <= 32, "N Must be between 1 and 32.");
 
@@ -558,7 +558,7 @@ inline bool MD5_SIMD::check_zeroes(int index) {
 
     constexpr int shift_amount = (32 - byte_count) * 4;
 
-    __reg128 reg = _cast_si128(digest[index]);
+    __reg128 reg = static_cast<__m128i>(digest[index]);
 
     // shift reg by shift amount
 
@@ -597,7 +597,7 @@ inline bool MD5_SIMD::check_zeroes(int index) {
     }
 
     // check that reg is zero
-    bool zero = (bool)_textz_si128(reg, reg);
+    const bool zero = static_cast<bool>(_textz_si128(reg, reg));
 
     return zero;
 }

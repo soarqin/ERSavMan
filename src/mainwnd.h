@@ -20,11 +20,13 @@ public:
     MainWnd();
     ~MainWnd() override;
 
-    void updateList();
+    void updateList() const;
+    void updateInfo(int index) const;
 
 private:
-    wxButton *btnExport_, *btnImport_;
+    wxButton *btnExport_, *btnImport_, *btnSwitch_;
     wxStaticText *filenameText_, *saveTypeText_, *charInfoText_;
-    wxListCtrl *charList_;
+    wxListView *charList_;
     SaveFile *savefile_ = nullptr;
+    bool faceMode_ = false;
 };

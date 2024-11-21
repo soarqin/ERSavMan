@@ -21,10 +21,10 @@ typedef SSIZE_T ssize_t;
 #include <sys/types.h>
 #endif
 
-void kmp_search(const void *full, size_t fullLen, const void *sub, size_t subLen, bool (*func)(int, void *), void *userp) {
+void kmp_search(const void *full, const size_t fullLen, const void *sub, size_t subLen, bool (*func)(int, void *), void *userp) {
     int i, j, len;
-    const auto *haystack = (const uint8_t *)full;
-    const auto *needle = (const uint8_t *)sub;
+    const auto *haystack = static_cast<const uint8_t*>(full);
+    const auto *needle = static_cast<const uint8_t*>(sub);
 
 #if defined(_MSC_VER)
     int *lpsTable = static_cast<int*>(_alloca(subLen * sizeof(int)));
@@ -71,7 +71,7 @@ void kmp_search(const void *full, size_t fullLen, const void *sub, size_t subLen
 void md5Hash(const void *buf, size_t len, uint8_t output[16]) {
 #if defined(__AVX2__)
     md5_simd::MD5_SIMD md5;
-    const auto *n = (const char *)buf;
+    const auto *n = static_cast<const char*>(buf);
     uint64_t l = len;
     md5.calculate<1>(&n, &l);
     md5.binarydigest(output, 0);
@@ -99,7 +99,7 @@ void md5Hash(const void *buf, size_t len, uint8_t output[16]) {
 //   more. (correctness?)
 //
 // This algorithm runs in alphabet_len+patlen time.
-void make_delta1(ptrdiff_t *delta1, const uint8_t *pat, size_t patlen) {
+void make_delta1(ptrdiff_t *delta1, const uint8_t *pat, const size_t patlen) {
     for (int i = 0; i < ALPHABET_LEN; i++) {
         delta1[i] = patlen;
     }
@@ -110,8 +110,8 @@ void make_delta1(ptrdiff_t *delta1, const uint8_t *pat, size_t patlen) {
 
 // true if the suffix of word starting from word[pos] is a prefix
 // of word
-bool is_prefix(const uint8_t *word, size_t wordlen, ptrdiff_t pos) {
-    int suffixlen = wordlen - pos;
+bool is_prefix(const uint8_t *word, const size_t wordlen, const ptrdiff_t pos) {
+    const int suffixlen = wordlen - pos;
     // could also use the strncmp() library function here
     // return ! strncmp(word, &word[pos], suffixlen);
     for (int i = 0; i < suffixlen; i++) {
@@ -124,7 +124,7 @@ bool is_prefix(const uint8_t *word, size_t wordlen, ptrdiff_t pos) {
 
 // length of the longest suffix of word ending on word[pos].
 // suffix_length("dddbcabc", 8, 4) = 2
-size_t suffix_length(const uint8_t *word, size_t wordlen, ptrdiff_t pos) {
+size_t suffix_length(const uint8_t *word, const size_t wordlen, const ptrdiff_t pos) {
     size_t i;
     // increment suffix length i to the first mismatch or beginning
     // of the word
@@ -168,7 +168,7 @@ size_t suffix_length(const uint8_t *word, size_t wordlen, ptrdiff_t pos) {
 // The second loop addresses case 2. Since suffix_length may not be
 // unique, we want to take the minimum value, which will tell us
 // how far away the closest potential match is.
-void make_delta2(ptrdiff_t *delta2, const uint8_t *pat, size_t patlen) {
+void make_delta2(ptrdiff_t *delta2, const uint8_t *pat, const size_t patlen) {
     ssize_t p;
     size_t last_prefix_index = 1;
 
@@ -182,7 +182,7 @@ void make_delta2(ptrdiff_t *delta2, const uint8_t *pat, size_t patlen) {
 
     // second loop
     for (p = 0; p < patlen - 1; p++) {
-        size_t slen = suffix_length(pat, patlen, p);
+        const size_t slen = suffix_length(pat, patlen, p);
         if (pat[p - slen] != pat[patlen - 1 - slen]) {
             delta2[patlen - 1 - slen] = patlen - 1 - p + slen;
         }
@@ -191,7 +191,7 @@ void make_delta2(ptrdiff_t *delta2, const uint8_t *pat, size_t patlen) {
 
 // Returns offset to first match.
 // See also glibc memmem() (non-BM) and std::boyer_moore_searcher (first-match).
-size_t boyer_moore(const uint8_t *string, size_t stringlen, const uint8_t *pat, size_t patlen) {
+size_t boyer_moore(const uint8_t *string, const size_t stringlen, const uint8_t *pat, size_t patlen) {
     ptrdiff_t delta1[ALPHABET_LEN];
 #if defined(_MSC_VER)
     ptrdiff_t *delta2 = (ptrdiff_t *)alloca(patlen * sizeof(ptrdiff_t));
@@ -217,8 +217,8 @@ size_t boyer_moore(const uint8_t *string, size_t stringlen, const uint8_t *pat, 
             return i + 1;
         }
 
-        ptrdiff_t shift = max(delta1[string[i]], delta2[j]);
+        const ptrdiff_t shift = max(delta1[string[i]], delta2[j]);
         i += shift;
     }
-    return (size_t)-1;
+    return static_cast<size_t>(-1);
 }

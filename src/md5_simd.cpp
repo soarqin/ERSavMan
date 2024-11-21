@@ -22,7 +22,7 @@ MD5_SIMD::MD5_SIMD() {
     init();
 }
 
-MD5_SIMD::MD5_SIMD(uint64_t buffer_size) {
+MD5_SIMD::MD5_SIMD(const uint64_t buffer_size) {
     if (buffer_size == 0 || buffer_size % 64 != 0) {
         throw std::runtime_error("Buffer Size must be greater then zero, and a multiple of 64");
     }
@@ -44,7 +44,7 @@ void MD5_SIMD::init() {
     unsigned int i;
 
     for (i = 0; i < (sizeof(kv) / sizeof(*kv)); i++) {
-        kv[i] = _set1_epi32((int)k[i]);
+        kv[i] = _set1_epi32(static_cast<int>(k[i]));
     }
 
     for (int hash_index = 0; hash_index < HASH_COUNT; hash_index++) {
@@ -78,13 +78,13 @@ void MD5_SIMD::reset() {
     }
 }
 
-void MD5_SIMD::pad_input(const char *text, uint64_t length, int idx) {
+void MD5_SIMD::pad_input(const char *text, const uint64_t length, const int idx) {
     // get size of padding
-    uint64_t index = length % 64;
-    uint64_t padLen = (index < 56) ? (56 - index) : (120 - index);
+    const uint64_t index = length % 64;
+    const uint64_t padLen = (index < 56) ? (56 - index) : (120 - index);
 
     // calculate length + padding
-    uint64_t new_length = length + padLen;
+    const uint64_t new_length = length + padLen;
 
     // copy original string
     memcpy(input_buffers[idx], text, length);
@@ -96,13 +96,13 @@ void MD5_SIMD::pad_input(const char *text, uint64_t length, int idx) {
     memset(&input_buffers[idx][length + 1], 0, padLen);
 
     // get length of input in bits
-    uint64_t bit_length = length * 8;
+    const uint64_t bit_length = length * 8;
 
     // add length to end of input
     memcpy(&input_buffers[idx][new_length], &bit_length, 8);
 }
 
-void MD5_SIMD::update(unsigned char *input[HASH_COUNT], uint64_t length) {
+void MD5_SIMD::update(unsigned char *input[HASH_COUNT], const uint64_t length) {
     // input should always me a multiple of 64
 
     // Update number of bits
@@ -302,7 +302,7 @@ digest[7] = _castps_si(row7);
 inline void MD5_SIMD::decode(__reg output[16], const __reg128 input[HASH_COUNT][4], uint64_t) {
     // 64 x 8-bits => 16 x 32-bits for each hash
 
-    int *data = (int *)&input[0];
+    const int *data = (int *)&input[0];
 
 #ifdef USE_256_BITS
     __reg offset = _setr_epi32(0, 16, 32, 48, 64, 80, 96, 112);
@@ -318,11 +318,11 @@ inline void MD5_SIMD::decode(__reg output[16], const __reg128 input[HASH_COUNT][
     }
 }
 
-inline void MD5_SIMD::encode(__reg *output, const __reg *input, uint64_t len) {
+inline void MD5_SIMD::encode(__reg *output, const __reg *input, const uint64_t len) {
     memcpy(output, input, len);
 }
 
-std::string MD5_SIMD::hexdigest(int index) const {
+std::string MD5_SIMD::hexdigest(const int index) const {
     if (!finalized) {
         return "";
     }
@@ -344,7 +344,7 @@ std::string MD5_SIMD::hexdigest(int index) const {
     return std::string(buf);
 }
 
-void MD5_SIMD::hexdigest(char *str, int index) const {
+void MD5_SIMD::hexdigest(char *str, const int index) const {
     if (!finalized) {
         return;
     }
@@ -361,7 +361,7 @@ void MD5_SIMD::hexdigest(char *str, int index) const {
     }
 }
 
-void MD5_SIMD::binarydigest(uint8_t *data, int index) const {
+void MD5_SIMD::binarydigest(uint8_t *data, const int index) const {
     __reg128 *tmp_pointer = (__reg128 * ) & digest[index];
 
     _storeu_si128((__reg128 *)data, *tmp_pointer);
